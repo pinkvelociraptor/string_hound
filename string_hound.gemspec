@@ -9,12 +9,10 @@ Gem::Specification.new do |s|
   s.homepage    = 'http://github.com/pinkvelociraptor/string_hound'
 
   s.files       = [
-     "README.rdoc",
+     "README.doc",
      "Rakefile",
-     "VERSION",
      "string_hound.gemspec",
      "lib/string_hound.rb",
-     "rails/init.rb",
      "test/string_hound_test.rb"
   ]
   s.test_files  = ["test/string_hound_test.rb"]
