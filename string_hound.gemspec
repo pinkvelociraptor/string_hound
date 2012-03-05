@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
      "Rakefile",
      "string_hound.gemspec",
      "lib/string_hound.rb",
+     "lib/string_hound/tasks.rb",
      "test/string_hound_test.rb"
   ]
   s.test_files  = ["test/string_hound_test.rb"]
