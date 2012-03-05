@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'http://github.com/pinkvelociraptor/string_hound'
 
   s.files       = [
-     "README.doc",
+     "README",
      "Rakefile",
      "string_hound.gemspec",
      "lib/string_hound.rb",
