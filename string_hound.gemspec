@@ -1,6 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'string_hound'
   s.version     = '0.1.0'
+  s.platform    = Gem::Platform::RUBY
   s.summary     = "string_hound"
   s.description = "Bark! hunts for strings."
   s.authors     = ["Noel Dellofano"]
