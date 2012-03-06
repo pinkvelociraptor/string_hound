@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'string_hound'
-  s.version     = '0.0.0'
+  s.version     = '0.1.0'
   s.date        = '2012-3-1'
   s.summary     = "string_hound"
   s.description = "Bark! hunts for strings."
