@@ -9,7 +9,7 @@ class StringHoundTest < Test::Unit::TestCase
 
   context "#taste" do
     setup do
-      @hound = StringHound.new("test")
+      @hound = StringHound.new(false,"test")
     end
 
     should "find single quoted strings" do
@@ -50,11 +50,25 @@ class StringHoundTest < Test::Unit::TestCase
       assert_equal [], out
     end
 
+    should "get rid of lines of pure interpreted erb" do
+      s = "<% wombat-loves-oz %>"
+      s1 = "<% wombats-snow and other fun\n"
+      out = @hound.taste(s)
+      assert_equal [], out
+    end
+
+    should "parse normally erb lines containing <%=" do
+      s = "<%= wombat-loves-oz and 'Cool stuff click' %>"
+      out = @hound.taste(s)
+      assert_equal ["'Cool stuff click'"], out
+    end
+
+
   end
 
   context "#inline_strings" do
     setup do
-      @hound = StringHound.new("test")
+      @hound = StringHound.new(false,"test")
     end
 
     should "find strings within <<-TEXT tags" do
@@ -77,4 +91,118 @@ class StringHoundTest < Test::Unit::TestCase
       assert_nil out
     end
   end
+
+  context "#chew" do
+    setup do
+      @hound = StringHound.new(false,"test")
+      @out_arry = ["wombats are cool", "   "]
+    end
+
+    should "get rid of strings that are only whitespace" do
+      out = @hound.chew(@out_arry)
+      assert_equal ["wombats are cool"], out
+    end
+
+    should "get rid of strings that are only digits" do
+      @out_arry << "989"
+      @out_arry << "more stuff99"
+      out = @hound.chew(@out_arry)
+      assert_equal ["wombats are cool", "more stuff99"], out
+    end
+
+    should "get rid of strings that are possible varaible names, contains no spaces and underscores" do
+      @out_arry << "wombat_loves_oz"
+      @out_arry << "wombats_snow and other fun"
+      out = @hound.chew(@out_arry)
+      assert_equal ["wombats are cool", "wombats_snow and other fun"], out
+    end
+
+    should_eventually "get rid of strings that are possible varaible names, contains spaces and dashes in one word" do
+      @out_arry << "'  wombat-loves-oz'"
+      @out_arry << "'wombats-snow and other fun'"
+      out = @hound.chew(@out_arry)
+      assert_equal ["wombats are cool", "'wombats-snow and other fun'"], out
+    end
+
+  end
+
+  context "#digest" do
+    setup do
+      @hound = StringHound.new(false,"test")
+      f = File.new('test/myfile.txt', "w+")
+      #This should work with a stub instead
+      #StringHound.any_instance.stubs(:file).returns(f)
+      @hound.file = f
+    end
+
+    context "construct i18n string" do
+      should "from all text" do
+        content = "wombat success hooray"
+        s_out, k_out = @hound.digest(content)
+        assert_equal "I18n.t('txt.admin.test.myfile.success')", s_out
+      end
+
+      should "with ruby variables if present" do
+        snow = 'snow'
+        content = '"wombat success hooray #{snow}"'
+        s_out, k_out = @hound.digest(content)
+        assert_equal "I18n.t('txt.admin.test.myfile.success', :snow => snow)", s_out
+      end
+
+    end
+
+    context "construct key" do
+      should "from the longest word available from the content" do
+        content = "wombats all hooray"
+        s_out, k_out = @hound.digest(content)
+        assert_equal "txt.admin.test.myfile.wombats", k_out
+      end
+     end
+
+  end
+
+  context "#speak" do
+    setup do
+      StringHound.default_yml = "test/myfile.yml"
+      @r_file = File.new("test/somefile.rb", "w+")
+      @t_file = File.new("test/tfile.rb", "w+")
+    end
+
+    teardown do
+      File.delete(@r_file.path)
+      File.delete(@t_file.path)
+      File.delete(StringHound.default_yml) if File.exists?(StringHound.default_yml)
+    end
+
+    should "return if command_speak not set" do
+      @hound = StringHound.new(false,"test")
+      File.any_instance.expects(:write).never
+      @hound.speak("peekachoo rules")
+    end
+
+    should_eventually "write the given line to output file if content array is empty" do
+      @hound = StringHound.new(true,"test")
+      @hound.file = @r_file
+      out = @hound.taste("99")
+      assert_equal [], out
+
+      Tempfile.stubs(:new).returns(@t_file)
+      @t_file.expects(:write)
+      @hound.speak("  99  ")
+    end
+
+    should "add content to yml and source file if content array exists" do
+      @hound = StringHound.new(true,"test")
+      @hound = StringHound.new(true,"test")
+      @hound.file = @r_file
+      out = @hound.taste("'99 wombats everywhere'")
+      assert_equal ["'99 wombats everywhere'"], out
+
+      Tempfile.stubs(:new).returns(@t_file)
+      @t_file.expects(:write).at_least_once
+      @hound.speak("'99 wombats everywhere'")
+    end
+
+  end
+
 end
