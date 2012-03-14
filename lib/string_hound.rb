@@ -2,6 +2,7 @@ require 'tempfile'
 require 'find'
 require 'nokogiri'
 require 'fileutils'
+require 'regex_utils'
 
 ##
 #
@@ -18,6 +19,8 @@ require 'fileutils'
 
 class StringHound
 
+  include RegexUtils
+
   attr_reader :view_file
   attr_accessor :file, :command_speak
 
@@ -31,10 +34,6 @@ class StringHound
     @command_speak = false
   end
 
-#  def command_speak=(set_speak)
-#    @command_speak = set_speak
-#    @yml_file = File.open("config/locales/translations/admin.yml", "a+")
-#  end
 
   #
   # Iterates through directory and sets up
@@ -81,7 +80,7 @@ class StringHound
       return if is_javascript(line)
 
       if m = is_printed_erb(line)
-        out = m[0].scan(/["'][\w\s#\{\}]*["']/)
+        out = parse_for_strings(m[0])
       else
         result = Nokogiri::HTML(line)
         out = result.text().empty? ? out : result.text()
@@ -89,7 +88,7 @@ class StringHound
     elsif result = inline_strings(line)
       out = result
     else
-      out = line.scan(/["'][\w\s#\{\}]*["']/)
+      out = parse_for_strings(line)
     end
 
     @content_arry = chew(out)
@@ -122,8 +121,7 @@ class StringHound
   #   key              = txt.admin.file_path.success
   #
   def digest(content)
-    matched_vars = content.scan(/#\{(\w*)\}/)
-    vars = matched_vars unless matched_vars.nil?
+    vars = find_variables(content)
 
     cur_path = @file.path.split('/',2).last
     cur_path = cur_path.split('.').first
@@ -197,7 +195,6 @@ class StringHound
   # Add translation key to yml file
   #
   def speak_yml(content, key_name)
-    # Strip content of it's quotes
     quoteless_content = content.gsub(/["']/,'')
     yml_string  = "  - translation:\n"
     yml_string << "      key: \"#{key_name}\"\n"
@@ -210,7 +207,6 @@ class StringHound
   end
 
 
-
   #
   # Print matches to STDOUT
   #
@@ -218,17 +214,6 @@ class StringHound
     @prize.each { |p| puts "#{p[:filename]} : #{p[:line_number]}\t\t #{p[:value]}" }
   end
 
-  #
-  # Deal with weirdo injected strings in ruby code
-  #
-  def inline_strings(line)
-    if @inline && line.match(/^[\s]*(TEXT|CONTENT)/)
-      @inline = nil
-    elsif @inline || match = line.match(/(<<-TEXT|<<-CONTENT)[\s]*/)
-      @inline = true
-      match.nil? ? line : match.post_match
-    end
-  end
 
   #
   # Close all files and rename tmp file to real source file
@@ -239,18 +224,6 @@ class StringHound
       FileUtils.mv(@tmp_file.path, @file.path)
       @tmp_file = nil
     end
-  end
-
-  def is_erb_txt(line)
-    line.match(/<%=/).nil? && line.match(/(<%|%>)/)
-  end
-
-  def is_javascript(line)
-    line.match(/(\$j|\$z|function)/)
-  end
-
-  def is_printed_erb(line)
-    line.match(/<%=.*?(\n|%>)/)
   end
 
 end
