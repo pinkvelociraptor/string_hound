@@ -103,7 +103,7 @@ class StringHound
   end
 
   def is_javascript(line)
-    line.match(/($j|$z|function)/)
+    line.match(/(\$j|\$z|function)/)
   end
 
   def is_printed_erb(line)
