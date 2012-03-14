@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'string_hound'
-  s.version     = '0.1.1'
+  s.version     = '0.1.2'
   s.platform    = Gem::Platform::RUBY
   s.summary     = "string_hound"
   s.description = "Bark! hunts for strings."
@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
      "Rakefile",
      "string_hound.gemspec",
      "lib/string_hound.rb",
+     "lib/regex_utils.rb",
      "lib/string_hound/tasks.rb",
      "test/string_hound_test.rb"
   ]
