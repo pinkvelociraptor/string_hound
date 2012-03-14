@@ -9,7 +9,7 @@ class StringHoundTest < Test::Unit::TestCase
 
   context "#taste" do
     setup do
-      @hound = StringHound.new(false,"test")
+      @hound = StringHound.new("test")
     end
 
     should "find single quoted strings" do
@@ -68,7 +68,7 @@ class StringHoundTest < Test::Unit::TestCase
 
   context "#inline_strings" do
     setup do
-      @hound = StringHound.new(false,"test")
+      @hound = StringHound.new("test")
     end
 
     should "find strings within <<-TEXT tags" do
@@ -94,7 +94,7 @@ class StringHoundTest < Test::Unit::TestCase
 
   context "#chew" do
     setup do
-      @hound = StringHound.new(false,"test")
+      @hound = StringHound.new("test")
       @out_arry = ["wombats are cool", "   "]
     end
 
@@ -128,25 +128,29 @@ class StringHoundTest < Test::Unit::TestCase
 
   context "#digest" do
     setup do
-      @hound = StringHound.new(false,"test")
-      f = File.new('test/myfile.txt', "w+")
+      @hound = StringHound.new("test")
+      @f = File.new('test/myfile.txt', "w+")
       #This should work with a stub instead
       #StringHound.any_instance.stubs(:file).returns(f)
-      @hound.file = f
+      @hound.file = @f
+    end
+
+    teardown do
+      File.delete(@f.path)
     end
 
     context "construct i18n string" do
       should "from all text" do
         content = "wombat success hooray"
         s_out, k_out = @hound.digest(content)
-        assert_equal "I18n.t('txt.admin.test.myfile.success')", s_out
+        assert_equal "I18n.t('txt.admin.myfile.success')", s_out
       end
 
       should "with ruby variables if present" do
         snow = 'snow'
         content = '"wombat success hooray #{snow}"'
         s_out, k_out = @hound.digest(content)
-        assert_equal "I18n.t('txt.admin.test.myfile.success', :snow => snow)", s_out
+        assert_equal "I18n.t('txt.admin.myfile.success', :snow => snow)", s_out
       end
 
     end
@@ -155,7 +159,7 @@ class StringHoundTest < Test::Unit::TestCase
       should "from the longest word available from the content" do
         content = "wombats all hooray"
         s_out, k_out = @hound.digest(content)
-        assert_equal "txt.admin.test.myfile.wombats", k_out
+        assert_equal "txt.admin.myfile.wombats", k_out
       end
      end
 
@@ -175,13 +179,14 @@ class StringHoundTest < Test::Unit::TestCase
     end
 
     should "return if command_speak not set" do
-      @hound = StringHound.new(false,"test")
+      @hound = StringHound.new("test")
       File.any_instance.expects(:write).never
       @hound.speak("peekachoo rules")
     end
 
     should_eventually "write the given line to output file if content array is empty" do
-      @hound = StringHound.new(true,"test")
+      @hound = StringHound.new("test")
+      @hound.command_speak = true
       @hound.file = @r_file
       out = @hound.taste("99")
       assert_equal [], out
@@ -192,8 +197,8 @@ class StringHoundTest < Test::Unit::TestCase
     end
 
     should "add content to yml and source file if content array exists" do
-      @hound = StringHound.new(true,"test")
-      @hound = StringHound.new(true,"test")
+      @hound = StringHound.new("test")
+      @hound.command_speak = true
       @hound.file = @r_file
       out = @hound.taste("'99 wombats everywhere'")
       assert_equal ["'99 wombats everywhere'"], out

@@ -11,29 +11,30 @@ require 'fileutils'
 # to standard out in the form:
 #   <filename>: <line>    <string value>
 #
-# If no directory is given, StringHound will search the default_leash dir.
-# This default behavior can be set via the set_leash rake task
-#
-#
+# In speak mode, Stringhound will also insert a suggested i18n conversion of
+# all strings it finds into the file it finds them in, as well as
+# insert the same key and translation into the default yml file
 ##
 
 class StringHound
 
   attr_reader :view_file
-  attr_accessor :file
+  attr_accessor :file, :command_speak
 
-  class << self; attr_accessor :default_leash, :default_yml end
-  @default_leash = "app"
+  class << self; attr_accessor  :default_yml end
   @default_yml = "config/locales/translations/admin.yml"
 
 
-  def initialize(command_speak, dir = nil)
-    @directory = dir ? dir : self.class.default_leash
+  def initialize(dir)
+    @directory = dir
     @prize = []
-    @command_speak = command_speak || false
-    @yml_file = File.open(self.class.default_yml, "a+") if @command_speak
+    @command_speak = false
   end
 
+#  def command_speak=(set_speak)
+#    @command_speak = set_speak
+#    @yml_file = File.open("config/locales/translations/admin.yml", "a+")
+#  end
 
   #
   # Iterates through directory and sets up
@@ -62,25 +63,26 @@ class StringHound
   def sniff
     @file.each_line do |l|
       taste(l)
+      puts "Content array is "
+      puts @content_arry.inspect
       @content_arry.each { |m| @prize << {:filename => @file.path, :line_number => @file.lineno, :value => m } }
       speak(l)
     end
 
-    if @command_speak && @tmp_file
-      @tmp_file.close
-      FileUtils.mv(@tmp_file.path, @file.path)
-    end
+    file_cleanup
   end
 
   #
   # Parse engine
   #
   def taste(line)
-    out = []
+    @content_arry = out = []
+
     if view_file
-      #handle erb
-      return @content_arry = [] if ( line.match(/<%=/).nil? && line.match(/(<%|%>)/) )
-      if m = line.match(/<%=.*?(\n|%>)/)
+      return if is_erb_txt(line)
+      return if is_javascript(line)
+
+      if m = is_printed_erb(line)
         out = m[0].scan(/["'][\w\s#\{\}]*["']/)
       else
         result = Nokogiri::HTML(line)
@@ -95,6 +97,18 @@ class StringHound
     @content_arry = chew(out)
   end
 
+
+  def is_erb_txt(line)
+    line.match(/<%=/).nil? && line.match(/(<%|%>)/)
+  end
+
+  def is_javascript(line)
+    line.match(/($j|$z|function)/)
+  end
+
+  def is_printed_erb(line)
+    line.match(/<%=.*?(\n|%>)/)
+  end
 
 
  #
@@ -125,15 +139,14 @@ class StringHound
     matched_vars = content.scan(/#\{(\w*)\}/)
     vars = matched_vars unless matched_vars.nil?
 
-
-    #Strip the leading defalt directory from the name for prettier path
-    cur_path = @file.path.match(self.class.default_leash).nil? ? @file.path : @file.path.split('/',2).last
-
+    cur_path = @file.path.split('/',2).last
     cur_path = cur_path.split('.').first
     cur_path.gsub!('/','.')
+
     words = content.scan(/\w*/)
     words.sort! {|x,y| x.length <=> y.length}
     identifier = words.last
+
     key_name = "txt.admin." + cur_path + '.' + identifier
     localized_string = "I18n.t('#{key_name}'"
 
@@ -144,7 +157,6 @@ class StringHound
 
     return localized_string, key_name
   end
-
 
 
   #
@@ -161,11 +173,14 @@ class StringHound
     @yml_file ||= File.open(self.class.default_yml, "a+")
 
     if !@content_arry.empty?
+      replacement_arry=[]
       @content_arry.each do |content|
         i18n_string, key_name = digest(content)
+        replacement_arry << [i18n_string, content]
         speak_yml(content, key_name)
-        speak_source_file(i18n_string, line)
       end
+
+      speak_source_file(line, replacement_arry)
     else
       @tmp_file.write(line)
     end
@@ -177,9 +192,14 @@ class StringHound
   # Construct a diff like format in tmp file
   # for i18n string
   #
-  def speak_source_file(i18n_string, line)
+  def speak_source_file(line, replacement_arry)
+    localized_line = line.dup
+    replacement_arry.each do |i18n_string, content|
+      localized_line.gsub!(content, i18n_string)
+    end
+
     @tmp_file.write("<<<<<<<<<<\n")
-    @tmp_file.write("#{i18n_string}\n")
+    @tmp_file.write("#{localized_line}\n")
     @tmp_file.write("==========\n")
     @tmp_file.write(line)
     @tmp_file.write(">>>>>>>>>>\n")
@@ -210,13 +230,26 @@ class StringHound
     @prize.each { |p| puts "#{p[:filename]} : #{p[:line_number]}\t\t #{p[:value]}" }
   end
 
-
+  #
+  # Deal with weirdo injected strings in ruby code
+  #
   def inline_strings(line)
     if @inline && line.match(/^[\s]*(TEXT|CONTENT)/)
       @inline = nil
     elsif @inline || match = line.match(/(<<-TEXT|<<-CONTENT)[\s]*/)
       @inline = true
       match.nil? ? line : match.post_match
+    end
+  end
+
+  #
+  # Close all files and rename tmp file to real source file
+  #
+  def file_cleanup
+    if @tmp_file
+      @tmp_file.close
+      FileUtils.mv(@tmp_file.path, @file.path)
+      @tmp_file = nil
     end
   end
 
