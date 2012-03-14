@@ -63,8 +63,6 @@ class StringHound
   def sniff
     @file.each_line do |l|
       taste(l)
-      puts "Content array is "
-      puts @content_arry.inspect
       @content_arry.each { |m| @prize << {:filename => @file.path, :line_number => @file.lineno, :value => m } }
       speak(l)
     end
@@ -97,18 +95,6 @@ class StringHound
     @content_arry = chew(out)
   end
 
-
-  def is_erb_txt(line)
-    line.match(/<%=/).nil? && line.match(/(<%|%>)/)
-  end
-
-  def is_javascript(line)
-    line.match(/(\$j|\$z|function)/)
-  end
-
-  def is_printed_erb(line)
-    line.match(/<%=.*?(\n|%>)/)
-  end
 
 
  #
@@ -211,10 +197,12 @@ class StringHound
   # Add translation key to yml file
   #
   def speak_yml(content, key_name)
+    # Strip content of it's quotes
+    quoteless_content = content.gsub(/["']/,'')
     yml_string  = "  - translation:\n"
     yml_string << "      key: \"#{key_name}\"\n"
-    yml_string << "      title: \"#{content} label\"\n"
-    yml_string << "      value: \"#{content}\"\n"
+    yml_string << "      title: \"#{quoteless_content} label\"\n"
+    yml_string << "      value: \"#{quoteless_content}\"\n"
 
    @yml_file.write("\n<<<<<<<<<<\n")
    @yml_file.write(yml_string)
@@ -251,6 +239,18 @@ class StringHound
       FileUtils.mv(@tmp_file.path, @file.path)
       @tmp_file = nil
     end
+  end
+
+  def is_erb_txt(line)
+    line.match(/<%=/).nil? && line.match(/(<%|%>)/)
+  end
+
+  def is_javascript(line)
+    line.match(/(\$j|\$z|function)/)
+  end
+
+  def is_printed_erb(line)
+    line.match(/<%=.*?(\n|%>)/)
   end
 
 end
