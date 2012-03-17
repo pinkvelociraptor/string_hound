@@ -22,16 +22,17 @@ class StringHound
   include RegexUtils
 
   attr_reader :view_file
-  attr_accessor :file, :command_speak
+  attr_accessor :file, :command_speak, :interactive
 
   class << self; attr_accessor  :default_yml end
   @default_yml = "config/locales/translations/admin.yml"
 
 
-  def initialize(dir)
+  def initialize(dir, opts = nil)
     @directory = dir
     @prize = []
     @command_speak = false
+    @interactive = opts && opts[:interactive] ? opts[:interactive] : false
   end
 
 
@@ -104,6 +105,7 @@ class StringHound
     prsd_arry.select do |parsed_string|
       parsed_string.match(/[\S]/) &&
         parsed_string.match(/[\D]/)  &&
+        !parsed_string.match(/txt\.[\w]*\.[\w]*/) &&
         !(parsed_string.match(/[\s]/).nil? && parsed_string.match(/[_-]/))
     end
   end
@@ -156,15 +158,18 @@ class StringHound
     @tmp_file ||= Tempfile.new(f_name)
     @yml_file ||= File.open(self.class.default_yml, "a+")
 
+
     if !@content_arry.empty?
       replacement_arry=[]
       @content_arry.each do |content|
         i18n_string, key_name = digest(content)
-        replacement_arry << [i18n_string, content]
-        speak_yml(content, key_name)
+        replacement_arry << [i18n_string, content, key_name]
       end
 
       speak_source_file(line, replacement_arry)
+      if !@interactive || @localize_now
+        speak_yml(replacement_arry)
+      end
     else
       @tmp_file.write(line)
     end
@@ -182,28 +187,51 @@ class StringHound
       localized_line.gsub!(content, i18n_string)
     end
 
-    @tmp_file.write("<<<<<<<<<<\n")
-    @tmp_file.write("#{localized_line}\n")
-    @tmp_file.write("==========\n")
-    @tmp_file.write(line)
-    @tmp_file.write(">>>>>>>>>>\n")
+    if @interactive
+      write_diffs(STDOUT, line, localized_line)
+      speak_to_me
+      @localize_now ? @tmp_file.write(localized_line) : @tmp_file.write(line)
+    else
+      write_diffs(@tmp_file, line, localized_line)
+    end
   end
 
 
+ #
+ # Ask whether to localize the string now or not
+ #
+  def speak_to_me
+    begin
+      puts "Localize string now? (y/n)"
+      answer = STDIN.gets
+    end while !answer.match(/^(y|n)/)
+    @localize_now =  answer.include?("y")? true : false
+  end
+
+
+  def write_diffs(output_via, line, localized_line)
+    output_via.write("<<<<<<<<<<\n")
+    output_via.write("#{localized_line}\n")
+    output_via.write("==========\n")
+    output_via.write(line)
+    output_via.write(">>>>>>>>>>\n")
+  end
 
   #
   # Add translation key to yml file
   #
-  def speak_yml(content, key_name)
-    quoteless_content = content.gsub(/["']/,'')
-    yml_string  = "  - translation:\n"
-    yml_string << "      key: \"#{key_name}\"\n"
-    yml_string << "      title: \"#{quoteless_content} label\"\n"
-    yml_string << "      value: \"#{quoteless_content}\"\n"
+  def speak_yml(replacement_arry)
+    replacement_arry.each do |i8n_string, content, key_name|
+      quoteless_content = content.gsub(/["']/,'')
+      yml_string  = "\n  - translation:\n"
+      yml_string << "      key: \"#{key_name}\"\n"
+      yml_string << "      title: \"#{quoteless_content} label\"\n"
+      yml_string << "      value: \"#{quoteless_content}\"\n"
 
-   @yml_file.write("\n<<<<<<<<<<\n")
-   @yml_file.write(yml_string)
-   @yml_file.write(">>>>>>>>>>\n")
+      @yml_file.write("\n<<<<<<<<<<\n") unless @localize_now
+      @yml_file.write(yml_string)
+      @yml_file.write(">>>>>>>>>>\n") unless @localize_now
+    end
   end
 
 
