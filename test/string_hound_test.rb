@@ -140,26 +140,26 @@ class StringHoundTest < Test::Unit::TestCase
     end
 
     context "construct i18n string" do
-      should "from all text" do
+      should "use all text" do
         content = "wombat success hooray"
         s_out, k_out = @hound.digest(content)
-        assert_equal "I18n.t('txt.admin.myfile.success')", s_out
+        assert_equal "I18n.t('txt.admin.myfile.wombat_success_hooray')", s_out
       end
 
-      should "with ruby variables if present" do
+      should "use ruby variables if present" do
         snow = 'snow'
-        content = '"wombat success hooray #{snow}"'
+        content = 'wombat success hooray #{snow}'
         s_out, k_out = @hound.digest(content)
-        assert_equal "I18n.t('txt.admin.myfile.success', :snow => snow)", s_out
+        assert_equal "I18n.t('txt.admin.myfile.wombat_success_hooray_snow', :snow => snow)", s_out
       end
 
     end
 
     context "construct key" do
-      should "from the longest word available from the content" do
-        content = "wombats all hooray"
+      should "use the first five words of the content" do
+        content = "wombats all hooray other snowboard stuff"
         s_out, k_out = @hound.digest(content)
-        assert_equal "txt.admin.myfile.wombats", k_out
+        assert_equal "txt.admin.myfile.wombats_all_hooray_other_snowboard", k_out
       end
      end
 

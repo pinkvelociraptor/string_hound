@@ -129,9 +129,8 @@ class StringHound
     cur_path = cur_path.split('.').first
     cur_path.gsub!('/','.')
 
-    words = content.scan(/\w*/)
-    words.sort! {|x,y| x.length <=> y.length}
-    identifier = words.last
+    words = content.scan(/\w+/)
+    identifier = words[0,5].join('_')
 
     key_name = "txt.admin." + cur_path + '.' + identifier
     localized_string = "I18n.t('#{key_name}'"
