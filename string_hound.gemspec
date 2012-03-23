@@ -15,7 +15,8 @@ Gem::Specification.new do |s|
      "lib/string_hound.rb",
      "lib/regex_utils.rb",
      "lib/string_hound/tasks.rb",
-     "test/string_hound_test.rb"
+     "test/string_hound_test.rb",
+     "test/test_helper.rb"
   ]
   s.test_files  = ["test/string_hound_test.rb"]
   s.require_paths = [".", 'lib']

@@ -8,14 +8,14 @@ module RegexUtils
       end
 
       def is_erb_txt(line)
-        line.match(/<%=/).nil? && line.match(/(<%|%>)/)
+        !!line.match(/<%=/).nil? && line.match(/(<%|%>)/)
       end
 
       def is_javascript(line)
-        line.match(/(\$j|\$z|function)/)
+        !!line.match(/(\$j|\$z|function)/)
       end
 
-      def is_printed_erb(line)
+      def find_printed_erb(line)
         line.match(/<%=.*?(\n|%>)/)
       end
 

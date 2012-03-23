@@ -1,9 +1,4 @@
-require 'rubygems'
-require 'test/unit'
-require 'shoulda'
-require 'mocha'
-require 'string_hound'
-require 'ruby-debug'
+require File.join(File.dirname(__FILE__), 'test_helper')
 
 class StringHoundTest < Test::Unit::TestCase
 
@@ -63,6 +58,11 @@ class StringHoundTest < Test::Unit::TestCase
       assert_equal ["'Cool stuff click'"], out
     end
 
+    should "parse nested erb inside html" do
+      s = "<strong><%= wombat-loves-oz and 'Cool stuff click' %></strong>"
+      out = @hound.taste(s)
+      assert_equal ["'Cool stuff click'"], out
+    end
 
   end
 
@@ -184,7 +184,7 @@ class StringHoundTest < Test::Unit::TestCase
       @hound.speak("peekachoo rules")
     end
 
-    should_eventually "write the given line to output file if content array is empty" do
+    should "write the given line to output file if content_array is empty" do
       @hound = StringHound.new("test")
       @hound.command_speak = true
       @hound.file = @r_file
@@ -196,7 +196,7 @@ class StringHoundTest < Test::Unit::TestCase
       @hound.speak("  99  ")
     end
 
-    should "add content to yml and source file if content array exists" do
+    should "add content to yml and source file if content_array exists and not interactive mode" do
       @hound = StringHound.new("test")
       @hound.command_speak = true
       @hound.file = @r_file
@@ -208,6 +208,20 @@ class StringHoundTest < Test::Unit::TestCase
       @hound.speak("'99 wombats everywhere'")
     end
 
+  end
+
+  context "#speak_source_file" do
+    setup do
+      StringHound.default_yml = "test/myfile.yml"
+      @r_file = File.new("test/somefile.rb", "w+")
+      @t_file = File.new("test/tfile.rb", "w+")
+    end
+
+    teardown do
+      File.delete(@r_file.path)
+      File.delete(@t_file.path)
+      File.delete(StringHound.default_yml) if File.exists?(StringHound.default_yml)
+    end
   end
 
 end

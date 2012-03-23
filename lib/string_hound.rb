@@ -75,15 +75,18 @@ class StringHound
   #
   def taste(line)
     @content_arry = out = []
+    #Note: this is temporary, will create a new class for 'line' to handle this all more cleanly
+    @html_text = false
 
     if view_file
       return if is_erb_txt(line)
       return if is_javascript(line)
 
-      if m = is_printed_erb(line)
+      if m = find_printed_erb(line)
         out = parse_for_strings(m[0])
       else
         result = Nokogiri::HTML(line)
+        @html_text = true
         out = result.text().empty? ? out : result.text()
       end
     elsif result = inline_strings(line)
@@ -181,9 +184,11 @@ class StringHound
   # for i18n string
   #
   def speak_source_file(line, replacement_arry)
+
     localized_line = line.dup
     replacement_arry.each do |i18n_string, content|
-      localized_line.gsub!(content, i18n_string)
+      replacement_string = @html_text ? "<%= "+ i18n_string + " %>" : i18n_string
+      localized_line.gsub!(content, replacement_string)
     end
 
     if @interactive
