@@ -140,7 +140,7 @@ class StringHoundTest < Test::Unit::TestCase
     end
 
     context "construct i18n string" do
-      should "use all text" do
+      hould "use all text" do
         content = "wombat success hooray"
         s_out, k_out = @hound.digest(content)
         assert_equal "I18n.t('txt.admin.myfile.wombat_success_hooray')", s_out

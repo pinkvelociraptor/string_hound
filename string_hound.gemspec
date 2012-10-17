@@ -20,4 +20,10 @@ Gem::Specification.new do |s|
   ]
   s.test_files  = ["test/string_hound_test.rb"]
   s.require_paths = [".", 'lib']
+
+  s.add_development_dependency("rake")
+  s.add_development_dependency("bundler")
+  s.add_development_dependency("shoulda")
+  s.add_development_dependency("nokogiri")
+
 end

@@ -3,6 +3,7 @@ require 'find'
 require 'nokogiri'
 require 'fileutils'
 require 'regex_utils'
+require 'line'
 
 ##
 #
@@ -62,9 +63,10 @@ class StringHound
   #
   def sniff
     @file.each_line do |l|
-      taste(l)
-      @content_arry.each { |m| @prize << {:filename => @file.path, :line_number => @file.lineno, :value => m } }
-      speak(l)
+      line = Line.new(l)
+      taste(line)
+      line.valid_strings.each { |m| @prize << {:filename => @file.path, :line_number => @file.lineno, :value => m } }
+      speak(line)
     end
 
     file_cleanup
@@ -74,28 +76,26 @@ class StringHound
   # Parse engine
   #
   def taste(line)
-    @content_arry = out = []
-    #Note: this is temporary, will create a new class for 'line' to handle this all more cleanly
-    @html_text = false
+    out = []
 
     if view_file
-      return if is_erb_txt(line)
-      return if is_javascript(line)
+      return if line.erb_txt?
+      return if line.javascript?
 
-      if m = find_printed_erb(line)
-        out = parse_for_strings(m[0])
+      if m = line.find_printed_erb
+        out = line.parse_for_strings(m[0])
       else
-        result = Nokogiri::HTML(line)
-        @html_text = true
+        result = Nokogiri::HTML(line.content)
+        line.raw_html = true
         out = result.text().empty? ? out : result.text()
       end
     elsif result = inline_strings(line)
       out = result
     else
-      out = parse_for_strings(line)
+      out = line.parse_for_strings(line)
     end
 
-    @content_arry = chew(out)
+    line.valid_strings = chew(out)
   end
 
 
@@ -126,7 +126,7 @@ class StringHound
   #   key              = txt.admin.file_path.success
   #
   def digest(content)
-    vars = find_variables(content)
+    vars = Line.find_variables_in(content)
 
     cur_path = @file.path.split('/',2).last
     cur_path = cur_path.split('.').first
@@ -161,9 +161,9 @@ class StringHound
     @yml_file ||= File.open(self.class.default_yml, "a+")
 
 
-    if !@content_arry.empty?
+    if !line.valid_strings.empty?
       replacement_arry=[]
-      @content_arry.each do |content|
+      line.valid_strings.each do |content|
         i18n_string, key_name = digest(content)
         replacement_arry << [i18n_string, content, key_name]
       end
@@ -173,7 +173,7 @@ class StringHound
         speak_yml(replacement_arry)
       end
     else
-      @tmp_file.write(line)
+      @tmp_file.write(line.content)
     end
   end
 
@@ -185,16 +185,16 @@ class StringHound
   #
   def speak_source_file(line, replacement_arry)
 
-    localized_line = line.dup
+    localized_line = line.content.dup
     replacement_arry.each do |i18n_string, content|
-      replacement_string = @html_text ? "<%= "+ i18n_string + " %>" : i18n_string
+      replacement_string = line.is_raw_html? ? "<%= "+ i18n_string + " %>" : i18n_string
       localized_line.gsub!(content, replacement_string)
     end
 
     if @interactive
       write_diffs(STDOUT, line, localized_line)
       speak_to_me
-      @localize_now ? @tmp_file.write(localized_line) : @tmp_file.write(line)
+      @localize_now ? @tmp_file.write(localized_line) : @tmp_file.write(line.content)
     else
       write_diffs(@tmp_file, line, localized_line)
     end
@@ -217,7 +217,7 @@ class StringHound
     output_via.write("<<<<<<<<<<\n")
     output_via.write("#{localized_line}\n")
     output_via.write("==========\n")
-    output_via.write(line)
+    output_via.write(line.content)
     output_via.write(">>>>>>>>>>\n")
   end
 
