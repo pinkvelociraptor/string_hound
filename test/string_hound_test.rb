@@ -150,7 +150,7 @@ class StringHoundTest < Test::Unit::TestCase
         snow = 'snow'
         content = 'wombat success hooray #{snow}'
         s_out, k_out = @hound.digest(content)
-        assert_equal "I18n.t('txt.admin.myfile.wombat_success_hooray_snow', :snow => snow)", s_out
+        assert_equal "I18n.t('txt.admin.myfile.wombat_success_hooray_snow', :[\"snow\"] => [\"snow\"])", s_out
       end
 
     end
