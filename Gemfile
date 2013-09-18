@@ -1,10 +1,11 @@
-source "http://rubygems.org"
+source "https://rubygems.org"
 
-gem "bundler"
-gem "rails", "2.3.14"
+gem "rails", "~> 2.3.14"
 
+gem "bump"
 gem "mocha"
 gem "rake"
-gem "shoulda"
+gem "minitest", "~> 4.7"
+gem "minitest-colorize"
 gem "nokogiri"
-gem "ruby-debug",   "~> 0.10.4"
+gem "ruby-debug",   "~> 0.10.4", :platforms => [:ruby_19]

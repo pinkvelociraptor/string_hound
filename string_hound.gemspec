@@ -1,23 +1,8 @@
-Gem::Specification.new do |s|
-  s.name        = 'string_hound'
-  s.version     = '0.1.5'
-  s.platform    = Gem::Platform::RUBY
+Gem::Specification.new 'string_hound', '0.1.5' do |s|
   s.summary     = "string_hound"
   s.description = "Bark! hunts for strings."
   s.authors     = ["Noel Dellofano"]
   s.email       = 'noel@zendesk.com'
-  s.homepage    = 'http://github.com/pinkvelociraptor/string_hound'
-
-  s.files       = [
-     "README",
-     "Rakefile",
-     "string_hound.gemspec",
-     "lib/string_hound.rb",
-     "lib/regex_utils.rb",
-     "lib/string_hound/tasks.rb",
-     "test/string_hound_test.rb",
-     "test/test_helper.rb"
-  ]
-  s.test_files  = ["test/string_hound_test.rb"]
-  s.require_paths = [".", 'lib']
+  s.homepage    = 'https://github.com/pinkvelociraptor/string_hound'
+  s.files       = `git ls-files lib`.split("\n")
 end
